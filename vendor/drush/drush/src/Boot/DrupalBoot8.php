@@ -25,12 +25,12 @@ use Drush\Runtime\LegacyServiceFinder;
 
 class DrupalBoot8 extends DrupalBoot
 {
-    protected ?LoggrInterface $drupalLoggerAdapter = null;
     protected ?DrupalKernelInterface $kernel = null;
     protected Request $request;
 
     public function __construct(protected ServiceManager $serviceManager, protected $autoloader)
     {
+        parent::__construct();
     }
 
     public function getRequest(): Request
@@ -46,23 +46,6 @@ class DrupalBoot8 extends DrupalBoot
     public function getKernel(): DrupalKernelInterface
     {
         return $this->kernel;
-    }
-
-    /**
-     * Sometimes (e.g. in the integration tests), the DrupalBoot
-     * object will be cached, and re-injected into a fresh set
-     * of preflight / bootstrap objects. When this happens, the
-     * new Drush logger will be injected into the boot object. If
-     * this happens after we have created the Drupal logger adapter
-     * (i.e., after bootstrapping Drupal), then we also need to
-     * update the logger reference in that adapter.
-     */
-    public function setLogger(LoggerInterface $logger): void
-    {
-        if ($this->drupalLoggerAdapter) {
-            $this->drupalLoggerAdapter->setLogger($logger);
-        }
-        parent::setLogger($logger);
     }
 
     public function validRoot(?string $path): bool
@@ -100,11 +83,6 @@ class DrupalBoot8 extends DrupalBoot
             $site_path = DrupalKernel::findSitePath($this->getRequest(), $require_settings);
         }
         return $site_path;
-    }
-
-    public function bootstrapDrupalCore(BootstrapManager $manager, string $drupal_root): string
-    {
-        return Path::join($drupal_root, 'core');
     }
 
     public function bootstrapDrupalSiteValidate(BootstrapManager $manager): bool

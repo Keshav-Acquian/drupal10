@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Drupal\FunctionalTests\Libraries;
 
 use Drupal\Tests\BrowserTestBase;
@@ -56,6 +58,7 @@ class JqueryUiLibraryAssetsTest extends BrowserTestBase {
 
     // All the core libraries that use jQuery UI assets.
     $libraries_to_check = [
+      'internal.jquery_ui',
       'drupal.autocomplete',
       'drupal.dialog',
     ];
@@ -70,7 +73,7 @@ class JqueryUiLibraryAssetsTest extends BrowserTestBase {
       foreach (['js', 'css'] as $type) {
         foreach ($library[$type] as $asset) {
           $file = $asset['data'];
-          if (strpos($file, 'jquery.ui') === FALSE) {
+          if (!str_contains($file, 'jquery.ui')) {
             continue;
           }
           $weight = $asset['weight'];
@@ -91,7 +94,7 @@ class JqueryUiLibraryAssetsTest extends BrowserTestBase {
    * order. The necessary loading order was determined by the requirements
    * specified in each jQuery UI JavaScript file.
    */
-  public function testProperlySetWeights() {
+  public function testProperlySetWeights(): void {
     $assets = [];
 
     // Confirm that no asset is assigned multiple weights.
@@ -110,13 +113,9 @@ class JqueryUiLibraryAssetsTest extends BrowserTestBase {
         'core/assets/vendor/jquery.ui/ui/data-min.js',
         'core/assets/vendor/jquery.ui/ui/disable-selection-min.js',
         'core/assets/vendor/jquery.ui/ui/focusable-min.js',
-        'core/assets/vendor/jquery.ui/ui/form-min.js',
-        'core/assets/vendor/jquery.ui/ui/ie-min.js',
         'core/assets/vendor/jquery.ui/ui/jquery-patch-min.js',
         'core/assets/vendor/jquery.ui/ui/keycode-min.js',
         'core/assets/vendor/jquery.ui/ui/plugin-min.js',
-        'core/assets/vendor/jquery.ui/ui/safe-active-element-min.js',
-        'core/assets/vendor/jquery.ui/ui/safe-blur-min.js',
         'core/assets/vendor/jquery.ui/ui/scroll-parent-min.js',
         'core/assets/vendor/jquery.ui/ui/unique-id-min.js',
         'core/assets/vendor/jquery.ui/ui/widget-min.js',
@@ -166,7 +165,7 @@ class JqueryUiLibraryAssetsTest extends BrowserTestBase {
   /**
    * Confirm that uses of a jQuery UI asset are configured with the same weight.
    */
-  public function testSameAssetSameWeight() {
+  public function testSameAssetSameWeight(): void {
     $asset_weights = [];
     $libraries_to_check = $this->coreLibrariesWithJqueryUiAssets;
 
@@ -175,7 +174,7 @@ class JqueryUiLibraryAssetsTest extends BrowserTestBase {
         foreach ($library[$type] as $asset) {
           $file = $asset['data'];
 
-          if (strpos($file, 'jquery.ui') !== FALSE) {
+          if (str_contains($file, 'jquery.ui')) {
             // If this is the first time a given file is checked, add the weight
             // value to an array.
             if (!isset($asset_weights[$file])) {
@@ -215,12 +214,12 @@ class JqueryUiLibraryAssetsTest extends BrowserTestBase {
    *
    * @dataProvider providerTestAssetLoading
    */
-  public function testLibraryAssetLoadingOrder($library) {
+  public function testLibraryAssetLoadingOrder($library, array $expected_css, array $expected_js): void {
     $this->drupalGet("jqueryui_library_assets_test/$library");
     $this->assertSession()->statusCodeEquals(200);
 
     // A pipe character in $libraries is delimiting multiple library names.
-    $libraries = strpos($library, '|') !== FALSE ? explode('|', $library) : [$library];
+    $libraries = str_contains($library, '|') ? explode('|', $library) : [$library];
     $files_to_check = [];
 
     // Populate an array with the filenames of every jQuery UI asset in the
@@ -230,7 +229,7 @@ class JqueryUiLibraryAssetsTest extends BrowserTestBase {
       foreach (['css', 'js'] as $type) {
         $assets = $this->coreLibrariesWithJqueryUiAssets[$library_name][$type];
         foreach ($assets as $asset) {
-          if (strpos($asset['data'], 'jquery.ui') !== FALSE) {
+          if (str_contains($asset['data'], 'jquery.ui')) {
             $files_to_check[$asset['data']] = TRUE;
           }
         }
@@ -296,7 +295,7 @@ class JqueryUiLibraryAssetsTest extends BrowserTestBase {
    *
    * @dataProvider providerTestAssetLoading
    */
-  public function testAssetLoadingUnchanged($library, array $expected_css, array $expected_js) {
+  public function testAssetLoadingUnchanged($library, array $expected_css, array $expected_js): void {
     $this->drupalGet("jqueryui_library_assets_test/$library");
     $this->assertSession()->statusCodeEquals(200);
 
@@ -343,7 +342,7 @@ class JqueryUiLibraryAssetsTest extends BrowserTestBase {
    *     library prior to the change from jQuery UI library dependencies to
    *     direct file inclusion.
    */
-  public function providerTestAssetLoading() {
+  public static function providerTestAssetLoading() {
     return [
       'drupal.autocomplete' => [
         'library' => 'drupal.autocomplete',

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Drupal\KernelTests\Core\Database;
 
 /**
@@ -11,12 +13,12 @@ abstract class DriverSpecificDatabaseTestBase extends DriverSpecificKernelTestBa
   use DatabaseTestSchemaInstallTrait;
 
   /**
-   * @inheritdoc
+   * {@inheritdoc}
    */
   protected static $modules = ['database_test'];
 
   /**
-   * @inheritdoc
+   * {@inheritdoc}
    */
   protected function setUp(): void {
     parent::setUp();

@@ -26,9 +26,14 @@ class UrlValidator extends ConstraintValidator
             (((?:[\_\.\pL\pN-]|%%[0-9A-Fa-f]{2})+:)?((?:[\_\.\pL\pN-]|%%[0-9A-Fa-f]{2})+)@)?  # basic auth
             (
                 (?:
-                    (?:xn--[a-z0-9-]++\.)*+xn--[a-z0-9-]++            # a domain name using punycode
-                        |
-                    (?:[\pL\pN\pS\pM\-\_]++\.)+[\pL\pN\pM]++          # a multi-level domain name
+                    (?:
+                        (?:[\pL\pN\pS\pM\-\_]++\.)+
+                        (?:
+                            (?:xn--[a-z0-9-]++)                       # punycode in tld
+                            |
+                            (?:[\pL\pN\pM]++)                         # no punycode in tld
+                        )
+                    )                                                 # a multi-level domain name
                         |
                     [a-z0-9\-\_]++                                    # a single-level domain name
                 )\.?
@@ -40,11 +45,14 @@ class UrlValidator extends ConstraintValidator
                 \]  # an IPv6 address
             )
             (:[0-9]+)?                              # a port (optional)
-            (?:/ (?:[\pL\pN\-._\~!$&\'()*+,;=:@]|%%[0-9A-Fa-f]{2})* )*          # a path
+            (?:/ (?:[\pL\pN\pS\pM\-._\~!$&\'()*+,;=:@]|%%[0-9A-Fa-f]{2})* )*    # a path
             (?:\? (?:[\pL\pN\-._\~!$&\'\[\]()*+,;=:@/?]|%%[0-9A-Fa-f]{2})* )?   # a query (optional)
             (?:\# (?:[\pL\pN\-._\~!$&\'()*+,;=:@/?]|%%[0-9A-Fa-f]{2})* )?       # a fragment (optional)
-        $~ixu';
+        $~ixuD';
 
+    /**
+     * @return void
+     */
     public function validate(mixed $value, Constraint $constraint)
     {
         if (!$constraint instanceof Url) {

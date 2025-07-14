@@ -230,7 +230,7 @@ class ModuleHandler implements ModuleHandlerInterface {
         }
       }
     }
-    $graph_object = new Graph($graph);
+    $graph_object = new Graph($graph ?? []);
     $graph = $graph_object->searchAndSort();
     foreach ($graph as $module_name => $data) {
       $modules[$module_name]->required_by = $data['reverse_paths'] ?? [];
@@ -329,6 +329,13 @@ class ModuleHandler implements ModuleHandlerInterface {
       $this->cacheBackend->set('module_implements', $this->implementations);
       $this->cacheNeedsWriting = FALSE;
     }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function destruct() {
+    $this->writeCache();
   }
 
   /**
@@ -499,7 +506,7 @@ class ModuleHandler implements ModuleHandlerInterface {
         foreach ($extra_types as $extra_type) {
           $extra_modules[] = array_keys($this->getImplementationInfo($extra_type . '_alter'));
         }
-        $extra_modules = array_merge([], ...$extra_modules);
+        $extra_modules = array_merge(...$extra_modules);
         // If any modules implement one of the extra hooks that do not implement
         // the primary hook, we need to add them to the $modules array in their
         // appropriate order. $this->getImplementationInfo() can only return
@@ -717,6 +724,7 @@ class ModuleHandler implements ModuleHandlerInterface {
    * {@inheritdoc}
    */
   public function getName($module) {
+    @trigger_error(__METHOD__ . '() is deprecated in drupal:10.3.0 and is removed from drupal:12.0.0. Use \Drupal\Core\Extension\ModuleExtensionList::getName($module) instead. See https://www.drupal.org/node/3310017', E_USER_DEPRECATED);
     return \Drupal::service('extension.list.module')->getName($module);
   }
 

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Drupal\Tests;
 
 use Drupal\Composer\Plugin\VendorHardening\Config;
@@ -23,7 +25,7 @@ class ComposerIntegrationTest extends UnitTestCase {
    *
    * @see https://www.drupal.org/about/core/policies/core-dependencies-policies/managing-composer-updates-for-drupal-core
    */
-  public function testComposerLockHash() {
+  public function testComposerLockHash(): void {
     $content_hash = self::getContentHash(file_get_contents($this->root . '/composer.json'));
     $lock = json_decode(file_get_contents($this->root . '/composer.lock'), TRUE);
     $this->assertSame($content_hash, $lock['content-hash']);
@@ -50,8 +52,8 @@ class ComposerIntegrationTest extends UnitTestCase {
    *
    * @dataProvider providerTestComposerJson
    */
-  public function testComposerTilde($path) {
-    if (preg_match('#composer/Metapackage/CoreRecommended/composer.json$#', $path)) {
+  public function testComposerTilde(string $path): void {
+    if (str_ends_with($path, 'composer/Metapackage/CoreRecommended/composer.json')) {
       $this->markTestSkipped("$path has tilde");
     }
     $content = json_decode(file_get_contents($path), TRUE);
@@ -63,7 +65,7 @@ class ComposerIntegrationTest extends UnitTestCase {
       foreach ($content[$composer_key] as $dependency => $version) {
         // We allow tildes if the dependency is a Symfony component.
         // @see https://www.drupal.org/node/2887000
-        if (strpos($dependency, 'symfony/') === 0) {
+        if (str_starts_with($dependency, 'symfony/')) {
           continue;
         }
         $this->assertStringNotContainsString('~', $version, "Dependency $dependency in $path contains a tilde, use a caret.");
@@ -76,9 +78,9 @@ class ComposerIntegrationTest extends UnitTestCase {
    *
    * @return array
    */
-  public function providerTestComposerJson() {
+  public static function providerTestComposerJson(): array {
     $data = [];
-    $composer_json_finder = $this->getComposerJsonFinder(realpath(__DIR__ . '/../../../../'));
+    $composer_json_finder = self::getComposerJsonFinder(realpath(__DIR__ . '/../../../../'));
     foreach ($composer_json_finder->getIterator() as $composer_json) {
       $data[$composer_json->getPathname()] = [$composer_json->getPathname()];
     }
@@ -133,7 +135,7 @@ class ComposerIntegrationTest extends UnitTestCase {
    *
    * @return array
    */
-  public function providerTestExpectedScaffoldFiles() {
+  public static function providerTestExpectedScaffoldFiles() {
     return [
       ['.editorconfig', 'assets/scaffold/files/editorconfig', '[project-root]'],
       ['.gitattributes', 'assets/scaffold/files/gitattributes', '[project-root]'],
@@ -184,7 +186,7 @@ class ComposerIntegrationTest extends UnitTestCase {
    *
    * @dataProvider providerTestExpectedScaffoldFiles
    */
-  public function testExpectedScaffoldFiles($destRelPath, $sourceRelPath, $expectedDestination = '[web-root]') {
+  public function testExpectedScaffoldFiles($destRelPath, $sourceRelPath, $expectedDestination = '[web-root]'): void {
     // Grab the 'file-mapping' section of the core composer.json file.
     $json = json_decode(file_get_contents($this->root . '/core/composer.json'));
     $scaffold_file_mapping = (array) $json->extra->{'drupal-scaffold'}->{'file-mapping'};
@@ -216,7 +218,7 @@ class ComposerIntegrationTest extends UnitTestCase {
    *
    * @return string
    */
-  protected static function getContentHash($composerFileContents)
+  protected static function getContentHash($composerFileContents): string
   {
     $content = json_decode($composerFileContents, true);
 
@@ -260,7 +262,6 @@ class ComposerIntegrationTest extends UnitTestCase {
     }
 
     $reflection = new \ReflectionProperty(Config::class, 'defaultConfig');
-    $reflection->setAccessible(TRUE);
     $config = $reflection->getValue();
     foreach (array_keys($config) as $package) {
       $this->assertContains(strtolower($package), $packages);

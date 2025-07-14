@@ -2,8 +2,10 @@
 
 namespace Drupal\user\Entity;
 
+use Drupal\Core\Config\Action\Attribute\ActionMethod;
 use Drupal\Core\Config\Entity\ConfigEntityBase;
 use Drupal\Core\Entity\EntityStorageInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\user\RoleInterface;
 
 /**
@@ -126,6 +128,7 @@ class Role extends ConfigEntityBase implements RoleInterface {
   /**
    * {@inheritdoc}
    */
+  #[ActionMethod(adminLabel: new TranslatableMarkup('Add permission to role'))]
   public function grantPermission($permission) {
     if ($this->isAdmin()) {
       return $this;
@@ -204,10 +207,15 @@ class Role extends ConfigEntityBase implements RoleInterface {
     $valid_permissions = array_intersect($this->permissions, array_keys($permission_definitions));
     $invalid_permissions = array_diff($this->permissions, $valid_permissions);
     if (!empty($invalid_permissions)) {
-      throw new \RuntimeException('Adding non-existent permissions to a role is not allowed. The incorrect permissions are "' . implode('", "', $invalid_permissions) . '".');
+      \Drupal::logger('user')->error('Non-existent permission(s) assigned to role "@label" (@id) were removed. Invalid permission(s): @permissions.', [
+        '@label' => $this->label(),
+        '@id' => $this->id(),
+        '@permissions' => implode(', ', $invalid_permissions),
+      ]);
+      $this->permissions = $valid_permissions;
     }
     foreach ($valid_permissions as $permission) {
-      // Depend on the module that is providing this permissions.
+      // Depend on the module that is providing this permission.
       $this->addDependency('module', $permission_definitions[$permission]['provider']);
       // Depend on any other dependencies defined by permissions granted to
       // this role.

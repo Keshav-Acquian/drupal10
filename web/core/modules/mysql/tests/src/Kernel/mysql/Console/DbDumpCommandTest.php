@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Drupal\Tests\mysql\Kernel\mysql\Console;
 
 use Drupal\Core\Command\DbDumpCommand;
@@ -33,7 +35,7 @@ class DbDumpCommandTest extends DriverSpecificKernelTestBase {
 
     // Create a table with a field type not defined in
     // \Drupal\Core\Database\Schema::getFieldTypeMap.
-    $table_name = $connection->tablePrefix() . 'foo';
+    $table_name = $connection->getPrefix() . 'foo';
     $sql = "create table if not exists `$table_name` (`test` datetime NOT NULL);";
     $connection->query($sql)->execute();
   }
@@ -41,7 +43,7 @@ class DbDumpCommandTest extends DriverSpecificKernelTestBase {
   /**
    * Tests the command directly.
    */
-  public function testDbDumpCommand() {
+  public function testDbDumpCommand(): void {
     $command = new DbDumpCommand();
     $command_tester = new CommandTester($command);
     $command_tester->execute([]);
@@ -61,7 +63,7 @@ class DbDumpCommandTest extends DriverSpecificKernelTestBase {
   /**
    * Tests schema only option.
    */
-  public function testSchemaOnly() {
+  public function testSchemaOnly(): void {
     $command = new DbDumpCommand();
     $command_tester = new CommandTester($command);
     $command_tester->execute(['--schema-only' => 'router']);
@@ -82,6 +84,21 @@ class DbDumpCommandTest extends DriverSpecificKernelTestBase {
     $this->assertStringNotContainsString("'name' => 'test", $output, 'Insert name field not found');
     $this->assertStringNotContainsString("'path' => 'test", $output, 'Insert path field not found');
     $this->assertStringNotContainsString("'pattern_outline' => 'test", $output, 'Insert pattern_outline field not found');
+  }
+
+  /**
+   * Tests insert count option.
+   */
+  public function testInsertCount(): void {
+    $command = new DbDumpCommand();
+    $command_tester = new CommandTester($command);
+    $command_tester->execute(['--insert-count' => '1']);
+
+    $router_row_count = (int) $this->container->get('database')->select('router')->countQuery()->execute()->fetchField();
+
+    $output = $command_tester->getDisplay();
+    $this->assertSame($router_row_count, substr_count($output, "insert('router"));
+    $this->assertGreaterThan(1, $router_row_count);
   }
 
 }

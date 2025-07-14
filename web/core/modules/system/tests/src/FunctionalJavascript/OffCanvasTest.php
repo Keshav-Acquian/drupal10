@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Drupal\Tests\system\FunctionalJavascript;
 
 /**
@@ -35,7 +37,7 @@ class OffCanvasTest extends OffCanvasTestBase {
    *
    * @dataProvider themeDataProvider
    */
-  public function testOffCanvasLinks($theme) {
+  public function testOffCanvasLinks($theme): void {
     $this->enableTheme($theme);
     $this->drupalGet('/off-canvas-test-links');
 
@@ -52,10 +54,10 @@ class OffCanvasTest extends OffCanvasTestBase {
     // Make sure tray updates to new content.
     // Check the first link again to make sure the empty title class is
     // removed.
-    foreach (['1', '2', '1'] as $link_index) {
+    foreach ([1, 2, 1] as $link_index) {
       $this->assertOffCanvasDialog($link_index, 'side');
       $header_text = $this->getOffCanvasDialog()->find('css', '.ui-dialog-title')->getText();
-      if ($link_index == '2') {
+      if ($link_index === 2) {
         // Check no title behavior.
         $web_assert->elementExists('css', '.ui-dialog-empty-title');
         $this->assertEquals(' ', $header_text);
@@ -115,7 +117,7 @@ class OffCanvasTest extends OffCanvasTestBase {
   /**
    * Tests the body displacement behaves differently at a narrow width.
    */
-  public function testNarrowWidth() {
+  public function testNarrowWidth(): void {
     $narrow_width_breakpoint = 768;
     $offset = 20;
     $height = 800;
@@ -123,7 +125,7 @@ class OffCanvasTest extends OffCanvasTestBase {
     $web_assert = $this->assertSession();
 
     // Test the same functionality on multiple themes.
-    foreach ($this->getTestThemes() as $theme) {
+    foreach (static::getTestThemes() as $theme) {
       $this->enableTheme($theme);
       // Testing at the wider width.
       $this->getSession()->resizeWindow($narrow_width_breakpoint + $offset, $height);

@@ -15,7 +15,7 @@ class Standard extends Xss implements EditorXssFilterInterface {
   /**
    * {@inheritdoc}
    */
-  public static function filterXss($html, FilterFormatInterface $format, FilterFormatInterface $original_format = NULL) {
+  public static function filterXss($html, FilterFormatInterface $format, ?FilterFormatInterface $original_format = NULL) {
     // Apply XSS filtering, but blacklist the <script>, <style>, <link>, <embed>
     // and <object> tags.
     // The <script> and <style> tags are blacklisted because their contents
@@ -129,7 +129,7 @@ class Standard extends Xss implements EditorXssFilterInterface {
   /**
    * {@inheritdoc}
    */
-  protected static function needsRemoval($html_tags, $elem) {
+  protected static function needsRemoval(array $html_tags, $elem) {
     // See static::filterXss() about how this class uses blacklisting instead
     // of the normal whitelisting.
     return !parent::needsRemoval($html_tags, $elem);

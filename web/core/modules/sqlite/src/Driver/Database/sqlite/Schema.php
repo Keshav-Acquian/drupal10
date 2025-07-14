@@ -28,8 +28,8 @@ class Schema extends DatabaseSchema {
   /**
    * {@inheritdoc}
    */
-  public function tableExists($table) {
-    $info = $this->getPrefixInfo($table);
+  public function tableExists($table, $add_prefix = TRUE) {
+    $info = $this->getPrefixInfo($table, $add_prefix);
 
     // Don't use {} around sqlite_master table.
     return (bool) $this->connection->query('SELECT 1 FROM [' . $info['schema'] . '].sqlite_master WHERE type = :type AND name = :name', [':type' => 'table', ':name' => $info['table']])->fetchField();
@@ -541,7 +541,7 @@ class Schema extends DatabaseSchema {
     $indexes = [];
     $result = $this->connection->query('PRAGMA [' . $info['schema'] . '].index_list([' . $info['table'] . '])');
     foreach ($result as $row) {
-      if (strpos($row->name, 'sqlite_autoindex_') !== 0) {
+      if (!str_starts_with($row->name, 'sqlite_autoindex_')) {
         $indexes[] = [
           'schema_key' => $row->unique ? 'unique keys' : 'indexes',
           'name' => $row->name,

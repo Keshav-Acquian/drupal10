@@ -23,6 +23,7 @@ use Twig\Node\Expression\ConstantExpression;
 use Twig\Node\Node;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
+use Twig\Runtime\EscaperRuntime;
 
 /**
  * A class providing Drupal Twig extensions.
@@ -140,6 +141,9 @@ class TwigExtension extends AbstractExtension {
       // CSS class and ID filters.
       new TwigFilter('clean_class', '\Drupal\Component\Utility\Html::getClass'),
       new TwigFilter('clean_id', '\Drupal\Component\Utility\Html::getId'),
+      new TwigFilter('clean_unique_id', '\Drupal\Component\Utility\Html::getUniqueId'),
+      new TwigFilter('add_class', [$this, 'addClass']),
+      new TwigFilter('set_attribute', [$this, 'setAttribute']),
       // This filter will render a renderable array to use the string results.
       new TwigFilter('render', [$this, 'renderVar']),
       new TwigFilter('format_date', [$this->dateFormatter, 'format']),
@@ -154,9 +158,18 @@ class TwigExtension extends AbstractExtension {
   public function getNodeVisitors() {
     // The node visitor is needed to wrap all variables with
     // render_var -> TwigExtension->renderVar() function.
-    return [
+    $visitors = [
       new TwigNodeVisitor(),
+      new TwigNodeVisitorCheckDeprecations(),
     ];
+    if (\in_array('__toString', TwigSandboxPolicy::getMethodsAllowedOnAllObjects(), TRUE)) {
+      // When __toString is an allowed method, there is no point in running
+      // \Twig\Extension\SandboxExtension::ensureToStringAllowed, so we add a
+      // node visitor to remove any CheckToStringNode nodes added by the
+      // sandbox extension.
+      $visitors[] = new RemoveCheckToStringNodeVisitor();
+    }
+    return $visitors;
   }
 
   /**
@@ -387,9 +400,6 @@ class TwigExtension extends AbstractExtension {
    *
    * Replacement function for Twig's escape filter.
    *
-   * Note: This function should be kept in sync with
-   * theme_render_and_autoescape().
-   *
    * @param \Twig\Environment $env
    *   A Twig Environment instance.
    * @param mixed $arg
@@ -408,9 +418,6 @@ class TwigExtension extends AbstractExtension {
    * @throws \Exception
    *   When $arg is passed as an object which does not implement __toString(),
    *   RenderableInterface or toString().
-   *
-   * @todo Refactor this to keep it in sync with theme_render_and_autoescape()
-   *   in https://www.drupal.org/node/2575065
    */
   public function escapeFilter(Environment $env, $arg, $strategy = 'html', $charset = NULL, $autoescape = FALSE) {
     // Check for a numeric zero int or float.
@@ -463,7 +470,7 @@ class TwigExtension extends AbstractExtension {
       if ($strategy == 'html') {
         return Html::escape($return);
       }
-      return twig_escape_filter($env, $return, $strategy, $charset, $autoescape);
+      return $env->getRuntime(EscaperRuntime::class)->escape($arg, $strategy, $charset, $autoescape);
     }
 
     // This is a normal render array, which is safe by definition, with
@@ -608,15 +615,18 @@ class TwigExtension extends AbstractExtension {
   /**
    * Creates an Attribute object.
    *
-   * @param array $attributes
-   *   (optional) An associative array of key-value pairs to be converted to
-   *   HTML attributes.
+   * @param Attribute|array $attributes
+   *   (optional) An existing attribute object or an associative array of
+   *   key-value pairs to be converted to HTML attributes.
    *
    * @return \Drupal\Core\Template\Attribute
    *   An attributes object that has the given attributes.
    */
-  public function createAttribute(array $attributes = []) {
-    return new Attribute($attributes);
+  public function createAttribute(Attribute|array $attributes = []) {
+    if (\is_array($attributes)) {
+      return new Attribute($attributes);
+    }
+    return $attributes;
   }
 
   /**
@@ -708,6 +718,80 @@ class TwigExtension extends AbstractExtension {
     if (isset($element['#cache']['keys'])) {
       $element['#cache']['keys'][] = $suggestion;
     }
+
+    return $element;
+  }
+
+  /**
+   * Triggers a deprecation error if a variable is deprecated.
+   *
+   * @param array $context
+   *   A Twig context array.
+   * @param array $used_variables
+   *   The names of the variables used in a template.
+   *
+   * @see \Drupal\Core\Template\TwigNodeCheckDeprecations
+   */
+  public function checkDeprecations(array $context, array $used_variables): void {
+    if (!isset($context['deprecations'])) {
+      return;
+    }
+
+    foreach ($used_variables as $name) {
+      if (isset($context['deprecations'][$name]) && \array_key_exists($name, $context)) {
+        @trigger_error($context['deprecations'][$name], E_USER_DEPRECATED);
+      }
+    }
+  }
+
+  /**
+   * Adds a value into the class attributes of a given element.
+   *
+   * Assumes element is an array.
+   *
+   * @param array $element
+   *   A render element.
+   * @param string[]|string ...$classes
+   *   The class(es) to add to the element. Arguments can include string keys
+   *   directly, or arrays of string keys.
+   *
+   * @return array
+   *   The element with the given class(es) in attributes.
+   */
+  public function addClass(array $element, ...$classes): array {
+    $attributes = new Attribute($element['#attributes'] ?? []);
+    $attributes->addClass(...$classes);
+    $element['#attributes'] = $attributes->toArray();
+
+    // Make sure element gets rendered again.
+    unset($element['#printed']);
+
+    return $element;
+  }
+
+  /**
+   * Sets an attribute on a given element.
+   *
+   * Assumes the element is an array.
+   *
+   * @param array $element
+   *   A render element.
+   * @param string $name
+   *   The attribute name.
+   * @param mixed $value
+   *   (optional) The attribute value.
+   *
+   * @return array
+   *   The element with the given sanitized attribute's value.
+   */
+  public function setAttribute(array $element, string $name, mixed $value = NULL): array {
+    $element['#attributes'] = AttributeHelper::mergeCollections(
+      $element['#attributes'] ?? [],
+      new Attribute([$name => $value])
+    );
+
+    // Make sure element gets rendered again.
+    unset($element['#printed']);
 
     return $element;
   }

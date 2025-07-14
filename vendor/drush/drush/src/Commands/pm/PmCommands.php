@@ -81,7 +81,6 @@ final class PmCommands extends DrushCommands
     #[CLI\Command(name: self::INSTALL, aliases: ['in', 'install', 'pm-install', 'en', 'pm-enable', 'pm:enable'])]
     #[CLI\Argument(name: 'modules', description: 'A comma delimited list of modules.')]
     #[CLI\Usage(name: 'drush pm:install --simulate content_moderation', description: "Display what modules would be installed but don't install them.")]
-    #[CLI\Bootstrap(level: DrupalBootLevels::ROOT)]
     public function install(array $modules): void
     {
         $modules = StringUtils::csvToArray($modules);
@@ -129,8 +128,7 @@ final class PmCommands extends DrushCommands
             // Note: we can't just call the API ($moduleHandler->loadInclude($module, 'install')),
             // because the API ignores modules that haven't been installed yet. We have
             // to do it the same way the `function drupal_check_module($module)` does.
-            $module_list = \Drupal::service('extension.list.module');
-            $file = DRUPAL_ROOT . '/' . $module_list->getPath($module) . "/$module.install";
+            $file = DRUPAL_ROOT . '/' . $this->extensionListModule->getPath($module) . "/$module.install";
             if (is_file($file)) {
                 require_once $file;
             }

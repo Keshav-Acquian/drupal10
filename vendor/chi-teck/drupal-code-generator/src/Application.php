@@ -1,7 +1,10 @@
-<?php declare(strict_types = 1);
+<?php
+
+declare(strict_types=1);
 
 namespace DrupalCodeGenerator;
 
+use Composer\InstalledVersions;
 use Drupal\Core\DependencyInjection\ContainerNotInitializedException;
 use DrupalCodeGenerator\Command\Navigation;
 use DrupalCodeGenerator\Event\GeneratorInfo;
@@ -31,6 +34,12 @@ use Twig\Loader\FilesystemLoader as TemplateLoader;
 
 /**
  * DCG console application.
+ *
+ * @psalm-suppress DeprecatedInterface
+ * @psalm-suppress DeprecatedTrait
+ *
+ * @todo Use Drupal replacement for ContainerAwareInterface when it's available.
+ * @see https://www.drupal.org/project/drupal/issues/3397522
  */
 final class Application extends BaseApplication implements ContainerAwareInterface, EventDispatcherInterface {
 
@@ -43,8 +52,10 @@ final class Application extends BaseApplication implements ContainerAwareInterfa
 
   /**
    * DCG version.
+   *
+   * @deprecated Use \DrupalCodeGenerator\Application->getVersion() instead.
    */
-  public const VERSION = '3.0.0';
+  public const VERSION = 'unknown';
 
   /**
    * DCG API version.
@@ -62,7 +73,10 @@ final class Application extends BaseApplication implements ContainerAwareInterfa
    * @psalm-suppress ArgumentTypeCoercion
    */
   public static function create(ContainerInterface $container): self {
-    $application = new self('Drupal Code Generator', self::VERSION);
+    $application = new self(
+      'Drupal Code Generator',
+      InstalledVersions::getPrettyVersion('chi-teck/drupal-code-generator'),
+    );
     $application->setContainer($container);
 
     $file_system = new SymfonyFileSystem();
@@ -76,7 +90,7 @@ final class Application extends BaseApplication implements ContainerAwareInterfa
         new TwigRenderer(new TwigEnvironment($template_loader)),
         new ListPrinter(),
         new TablePrinter(),
-        new ModuleInfo($container->get('module_handler')),
+        new ModuleInfo($container->get('module_handler'), $container->get('extension.list.module')),
         new ThemeInfo($container->get('theme_handler')),
         new ServiceInfo($container),
         new HookInfo($container->get('module_handler')),
@@ -111,7 +125,6 @@ final class Application extends BaseApplication implements ContainerAwareInterfa
    * Returns Drupal container.
    */
   public function getContainer(): ContainerInterface {
-    /** @psalm-suppress RedundantPropertyInitializationCheck */
     if (!isset($this->container)) {
       throw new ContainerNotInitializedException('Application::$container is not initialized yet.');
     }

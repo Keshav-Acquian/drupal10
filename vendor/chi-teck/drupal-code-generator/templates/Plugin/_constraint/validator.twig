@@ -1,9 +1,11 @@
 {% import '@lib/di.twig' as di %}
-<?php declare(strict_types = 1);
+<?php
+
+declare(strict_types=1);
 
 namespace Drupal\{{ machine_name }}\Plugin\Validation\Constraint;
 
-{% sort %}
+{% apply sort_namespaces %}
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\ConstraintValidator;
   {% if input_type == 'item' %}
@@ -15,37 +17,29 @@ use Drupal\Core\Entity\EntityInterface;
   {% endif %}
   {% if services %}
 {{ di.use(services) }}
-use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
+use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
   {% endif %}
-{% endsort %}
+{% endapply %}
 
 /**
  * Validates the {{ plugin_label }} constraint.
  */
-final class {{ class }}Validator extends ConstraintValidator {% if services %}implements ContainerFactoryPluginInterface {% endif %}{
+final class {{ class }}Validator extends ConstraintValidator {% if services %}implements ContainerInjectionInterface {% endif %}{
 
 {% if services %}
   /**
    * Constructs the object.
    */
   public function __construct(
-    array $configuration,
-    $plugin_id,
-    $plugin_definition,
 {{ di.signature(services) }}
-  ) {
-    parent::__construct($configuration, $plugin_id, $plugin_definition);
-  }
+  ) {}
 
   /**
    * {@inheritdoc}
    */
-  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition): self {
+  public static function create(ContainerInterface $container): self {
     return new self(
-      $configuration,
-      $plugin_id,
-      $plugin_definition,
 {{ di.container(services) }}
     );
   }

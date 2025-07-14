@@ -20,6 +20,11 @@ use Symfony\Component\HttpKernel\HttpKernelInterface;
 class PageCache implements HttpKernelInterface {
 
   /**
+   * Name of Page Cache's response header.
+   */
+  const HEADER = 'X-Drupal-Cache';
+
+  /**
    * The wrapped HTTP kernel.
    *
    * @var \Symfony\Component\HttpKernel\HttpKernelInterface
@@ -83,6 +88,11 @@ class PageCache implements HttpKernelInterface {
     }
     else {
       $response = $this->pass($request, $type, $catch);
+      // Don't indicate non-cacheability on responses to uncacheable requests.
+      // @see https://tools.ietf.org/html/rfc7231#section-4.2.3
+      if ($request->isMethodCacheable()) {
+        $response->headers->set(static::HEADER, 'UNCACHEABLE (request policy)');
+      }
     }
 
     return $response;
@@ -99,7 +109,7 @@ class PageCache implements HttpKernelInterface {
    * @param bool $catch
    *   Whether to catch exceptions or not
    *
-   * @returns \Symfony\Component\HttpFoundation\Response $response
+   * @return \Symfony\Component\HttpFoundation\Response
    *   A response object.
    */
   protected function pass(Request $request, $type = self::MAIN_REQUEST, $catch = TRUE) {
@@ -117,12 +127,12 @@ class PageCache implements HttpKernelInterface {
    * @param bool $catch
    *   Whether to catch exceptions or not
    *
-   * @returns \Symfony\Component\HttpFoundation\Response $response
+   * @return \Symfony\Component\HttpFoundation\Response
    *   A response object.
    */
   protected function lookup(Request $request, $type = self::MAIN_REQUEST, $catch = TRUE) {
     if ($response = $this->get($request)) {
-      $response->headers->set('X-Drupal-Cache', 'HIT');
+      $response->headers->set(static::HEADER, 'HIT');
     }
     else {
       $response = $this->fetch($request, $type, $catch);
@@ -150,7 +160,7 @@ class PageCache implements HttpKernelInterface {
       $if_none_match = $request->server->has('HTTP_IF_NONE_MATCH') ? stripslashes($request->server->get('HTTP_IF_NONE_MATCH')) : FALSE;
 
       if ($if_modified_since && $if_none_match
-        // etag must match.
+        // ETag must match.
         && $if_none_match == $response->getEtag()
         // if-modified-since must match.
         && $if_modified_since == $last_modified->getTimestamp()) {
@@ -183,7 +193,7 @@ class PageCache implements HttpKernelInterface {
    * @param bool $catch
    *   Whether to catch exceptions or not
    *
-   * @returns \Symfony\Component\HttpFoundation\Response $response
+   * @return \Symfony\Component\HttpFoundation\Response
    *   A response object.
    */
   protected function fetch(Request $request, $type = self::MAIN_REQUEST, $catch = TRUE) {
@@ -193,7 +203,7 @@ class PageCache implements HttpKernelInterface {
     // Only set the 'X-Drupal-Cache' header if caching is allowed for this
     // response.
     if ($this->storeResponse($request, $response)) {
-      $response->headers->set('X-Drupal-Cache', 'MISS');
+      $response->headers->set(static::HEADER, 'MISS');
     }
 
     return $response;
@@ -207,7 +217,8 @@ class PageCache implements HttpKernelInterface {
    * @param \Symfony\Component\HttpFoundation\Response $response
    *   A response object that should be stored in the page cache.
    *
-   * @returns bool
+   * @return bool
+   *   TRUE if the response has been stored successfully, FALSE otherwise.
    */
   protected function storeResponse(Request $request, Response $response) {
     // Drupal's primary cache invalidation architecture is cache tags: any
@@ -232,6 +243,7 @@ class PageCache implements HttpKernelInterface {
     //   so by replacing/extending this middleware service or adding another
     //   one.
     if (!$response instanceof CacheableResponseInterface) {
+      $response->headers->set(static::HEADER, 'UNCACHEABLE (no cacheability)');
       return FALSE;
     }
 
@@ -245,6 +257,7 @@ class PageCache implements HttpKernelInterface {
 
     // Allow policy rules to further restrict which responses to cache.
     if ($this->responsePolicy->check($response, $request) === ResponsePolicyInterface::DENY) {
+      $response->headers->set(static::HEADER, 'UNCACHEABLE (response policy)');
       return FALSE;
     }
 

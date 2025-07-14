@@ -32,16 +32,25 @@ final class SanitizeSessionsCommands extends DrushCommands implements SanitizePl
     /**
      * Sanitize sessions from the DB.
      */
-    #[CLI\Hook(type: HookManager::POST_COMMAND_HOOK, target: 'sql-sanitize')]
+    #[CLI\Hook(type: HookManager::POST_COMMAND_HOOK, target: SanitizeCommands::SANITIZE)]
     public function sanitize($result, CommandData $commandData): void
     {
-        $this->getDatabase()->truncate('sessions')->execute();
-        $this->logger()->success(dt('Sessions table truncated.'));
+        if ($this->applies()) {
+            $this->database->truncate('sessions')->execute();
+            $this->logger()->success(dt('Sessions table truncated.'));
+        }
     }
 
-    #[CLI\Hook(type: HookManager::ON_EVENT, target: 'sql-sanitize-confirms')]
+    #[CLI\Hook(type: HookManager::ON_EVENT, target: SanitizeCommands::CONFIRMS)]
     public function messages(&$messages, InputInterface $input): void
     {
-        $messages[] = dt('Truncate sessions table.');
+        if ($this->applies()) {
+            $messages[] = dt('Truncate sessions table.');
+        }
+    }
+
+    private function applies(): bool
+    {
+        return $this->database->schema()->tableExists('sessions');
     }
 }

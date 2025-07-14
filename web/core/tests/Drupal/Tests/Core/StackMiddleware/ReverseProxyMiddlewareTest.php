@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Drupal\Tests\Core\StackMiddleware;
 
 use Drupal\Core\Site\Settings;
@@ -25,6 +27,8 @@ class ReverseProxyMiddlewareTest extends UnitTestCase {
    * {@inheritdoc}
    */
   protected function setUp(): void {
+    parent::setUp();
+
     $responseMock = $this->createMock(Response::class);
     $this->mockHttpKernel = $this->createMock(HttpKernelInterface::class);
     $this->mockHttpKernel->method('handle')
@@ -34,7 +38,7 @@ class ReverseProxyMiddlewareTest extends UnitTestCase {
   /**
    * Tests that subscriber does not act when reverse proxy is not set.
    */
-  public function testNoProxy() {
+  public function testNoProxy(): void {
     $settings = new Settings([]);
     $this->assertEquals(0, $settings->get('reverse_proxy'));
 
@@ -55,7 +59,7 @@ class ReverseProxyMiddlewareTest extends UnitTestCase {
    *
    * @dataProvider reverseProxyEnabledProvider
    */
-  public function testReverseProxyEnabled($provided_settings, $expected_trusted_header_set) {
+  public function testReverseProxyEnabled($provided_settings, $expected_trusted_header_set): void {
     // Enable reverse proxy and add test values.
     $settings = new Settings(['reverse_proxy' => 1] + $provided_settings);
     $this->trustedHeadersAreSet($settings, $expected_trusted_header_set);
@@ -64,7 +68,7 @@ class ReverseProxyMiddlewareTest extends UnitTestCase {
   /**
    * Data provider for testReverseProxyEnabled.
    */
-  public function reverseProxyEnabledProvider() {
+  public static function reverseProxyEnabledProvider() {
     return [
       'Proxy with default trusted headers' => [
         ['reverse_proxy_addresses' => ['127.0.0.2', '127.0.0.3']],
