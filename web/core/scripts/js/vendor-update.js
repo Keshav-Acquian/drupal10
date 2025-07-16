@@ -88,15 +88,6 @@ const assetsFolder = `${coreFolder}/assets/vendor`;
       ],
     },
     {
-      pack: 'jquery-form',
-      library: 'internal.jquery.form',
-      files: [
-        { from: 'dist/jquery.form.min.js', to: 'jquery.form.min.js' },
-        { from: 'dist/jquery.form.min.js.map', to: 'jquery.form.min.js.map' },
-        { from: 'src/jquery.form.js', to: 'src/jquery.form.js' },
-      ],
-    },
-    {
       pack: 'js-cookie',
       files: [{ from: 'dist/js.cookie.min.js', to: 'js.cookie.min.js' }],
     },
@@ -142,6 +133,19 @@ const assetsFolder = `${coreFolder}/assets/vendor`;
       files: [{ from: 'dist/loadjs.min.js', to: 'loadjs.min.js' }],
     },
     {
+      pack: 'tua-body-scroll-lock',
+      files: [
+        { from: 'dist/tua-bsl.umd.min.js', to: 'tua-bsl.umd.min.js' },
+      ],
+    },
+    {
+      pack: 'transliteration',
+      files: [
+        { from: 'dist/browser/bundle.umd.min.js', to: 'bundle.umd.min.js' },
+        { from: 'dist/browser/bundle.umd.min.js.map', to: 'bundle.umd.min.js.map' },
+      ],
+    },
+    {
       pack: 'jquery-ui',
       folder: 'jquery.ui',
       process: {
@@ -171,14 +175,10 @@ const assetsFolder = `${coreFolder}/assets/vendor`;
         'ui/disable-selection.js',
         'ui/focusable.js',
         'ui/form-reset-mixin.js',
-        'ui/form.js',
-        'ui/ie.js',
         'ui/jquery-patch.js',
         'ui/keycode.js',
         'ui/labels.js',
         'ui/plugin.js',
-        'ui/safe-active-element.js',
-        'ui/safe-blur.js',
         'ui/scroll-parent.js',
         'ui/unique-id.js',
         'ui/version.js',

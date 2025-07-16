@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Drupal\Tests\Core\Entity;
 
 use Drupal\Core\Access\AccessResult;
@@ -45,7 +47,7 @@ class EntityCreateAccessCheckTest extends UnitTestCase {
    *
    * @return array
    */
-  public function providerTestAccess() {
+  public static function providerTestAccess() {
     $no_access = FALSE;
     $access = TRUE;
 
@@ -68,7 +70,7 @@ class EntityCreateAccessCheckTest extends UnitTestCase {
    *
    * @dataProvider providerTestAccess
    */
-  public function testAccess($entity_bundle, $requirement, $access, $expected, $expect_permission_context = TRUE) {
+  public function testAccess($entity_bundle, $requirement, $access, $expected, $expect_permission_context = TRUE): void {
 
     // Set up the access result objects for allowing or denying access.
     $access_result = $access ? AccessResult::allowed()->cachePerPermissions() : AccessResult::neutral()->cachePerPermissions();
@@ -82,7 +84,7 @@ class EntityCreateAccessCheckTest extends UnitTestCase {
 
     // Don't expect a call to the access control handler when we have a bundle
     // argument requirement but no bundle is provided.
-    if ($entity_bundle || strpos($requirement, '{') === FALSE) {
+    if ($entity_bundle || !str_contains($requirement, '{')) {
       $access_control_handler = $this->createMock('Drupal\Core\Entity\EntityAccessControlHandlerInterface');
       $access_control_handler->expects($this->once())
         ->method('createAccess')

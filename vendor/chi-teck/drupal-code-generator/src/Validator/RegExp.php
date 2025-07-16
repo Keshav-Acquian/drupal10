@@ -1,4 +1,6 @@
-<?php declare(strict_types = 1);
+<?php
+
+declare(strict_types=1);
 
 namespace DrupalCodeGenerator\Validator;
 
@@ -7,6 +9,9 @@ namespace DrupalCodeGenerator\Validator;
  */
 final class RegExp {
 
+  /**
+   * @psalm-param non-empty-string $pattern
+   */
   public function __construct(
     private readonly string $pattern,
     private readonly ?string $message = NULL,

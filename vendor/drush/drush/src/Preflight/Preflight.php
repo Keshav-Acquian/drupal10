@@ -7,10 +7,11 @@ namespace Drush\Preflight;
 use Composer\Autoload\ClassLoader;
 use Consolidation\SiteAlias\SiteAliasManager;
 use DrupalFinder\DrupalFinder;
-use Drush\DrupalFinder\DrushDrupalFinder;
+use Drush\Commands\DrushCommands;
 use Drush\Config\ConfigLocator;
 use Drush\Config\DrushConfig;
 use Drush\Config\Environment;
+use Drush\DrupalFinder\DrushDrupalFinder;
 use Drush\SiteAlias\SiteAliasFileLoader;
 use RuntimeException;
 use Symfony\Component\Console\Input\InputInterface;
@@ -242,8 +243,10 @@ class Preflight
     /**
      * @param $argv
      *   True if the request was successfully redispatched remotely. False if the request should proceed.
+     *
+     * @return array{preflightDidRedispatch: bool, exitStatus: int}
      */
-    public function preflight($argv): bool
+    public function preflight($argv): array
     {
         // Fail fast if there is anything in our environment that does not check out
         $this->verify->verify($this->environment);
@@ -304,7 +307,7 @@ class Preflight
 
         // Check to see if the alias on the command line points at
         // a local Drupal site that is not the site at $root
-        $localAliasDrupalFinder = new DrupalFinder($this->environment());
+        $localAliasDrupalFinder = new DrupalFinder($this->environment()->cwd());
         $foundAlternateRoot = $localAliasDrupalFinder->locateRoot($selfSiteAlias->localRoot());
         if ($foundAlternateRoot) {
             $alteredRoot = Path::canonicalize($localAliasDrupalFinder->getDrupalRoot());
@@ -313,9 +316,9 @@ class Preflight
             // a site-local Drush. If there is, we will redispatch to it.
             // NOTE: termination handlers have not been set yet, so it is okay
             // to exit early without taking special action.
-            $status = RedispatchToSiteLocal::redispatchIfSiteLocalDrush($argv, $alteredRoot, $this->environment->vendorPath(), $this->logger());
-            if ($status) {
-                return $status;
+            [$preflightDidRedispatch, $exitStatus] = RedispatchToSiteLocal::redispatchIfSiteLocalDrush($argv, $alteredRoot, $this->environment->vendorPath(), $this->logger());
+            if ($preflightDidRedispatch) {
+                return [$preflightDidRedispatch, $exitStatus];
             }
 
             // If the Drupal site changed, and the alternate site does not
@@ -337,7 +340,7 @@ class Preflight
         // has set it to something higher in one of the config files we loaded.
         $this->verify->confirmPhpVersion($config->get('drush.php.minimum-version'));
 
-        return false;
+        return [false, DrushCommands::EXIT_SUCCESS];
     }
 
     /**

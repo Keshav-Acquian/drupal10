@@ -1,4 +1,6 @@
-<?php declare(strict_types = 1);
+<?php
+
+declare(strict_types=1);
 
 namespace DrupalCodeGenerator\Command;
 
@@ -25,15 +27,11 @@ final class Navigation extends Command implements IOAwareInterface, LoggerAwareI
 
   /**
    * Menu tree.
-   *
-   * @var array
    */
   private array $menuTree = [];
 
   /**
    * Menu labels.
-   *
-   * @var array
    */
   private array $labels = [
     'misc:d7' => 'Drupal 7',
@@ -114,17 +112,10 @@ final class Navigation extends Command implements IOAwareInterface, LoggerAwareI
   }
 
   /**
-   * Returns a generator selected by the user from a multilevel console menu.
+   * Selects a generator.
    *
-   * @param \Symfony\Component\Console\Input\InputInterface $input
-   *   Input instance.
-   * @param \Symfony\Component\Console\Output\OutputInterface $output
-   *   Output instance.
-   * @param array $menu_trail
-   *   (Optional) Menu trail.
-   *
-   * @return string|null
-   *   Generator name or null if user decided to exit the navigation.
+   * Returns a generator selected by the user from a multilevel console menu or
+   * null if user decided to exit the navigation.
    */
   private function selectGenerator(InputInterface $input, OutputInterface $output, array $menu_trail = []): ?string {
 
@@ -178,7 +169,7 @@ final class Navigation extends Command implements IOAwareInterface, LoggerAwareI
   }
 
   /**
-   * Sort multi-dimensional array by keys.
+   * Sort multidimensional array by keys.
    *
    * @param array $array
    *   An array being sorted.

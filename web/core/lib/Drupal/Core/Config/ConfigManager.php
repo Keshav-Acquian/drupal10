@@ -220,7 +220,17 @@ class ConfigManager implements ConfigManagerInterface {
     // Remove any matching configuration from collections.
     foreach ($this->activeStorage->getAllCollectionNames() as $collection) {
       $collection_storage = $this->activeStorage->createCollection($collection);
-      $collection_storage->deleteAll($name . '.');
+      $overrider = $this->getConfigCollectionInfo()->getOverrideService($collection);
+      foreach ($collection_storage->listAll($name . '.') as $config_name) {
+        if ($overrider) {
+          $config = $overrider->createConfigObject($config_name, $collection);
+        }
+        else {
+          $config = new Config($config_name, $collection_storage, $this->eventDispatcher, $this->typedConfigManager);
+        }
+        $config->initWithData($collection_storage->read($config_name));
+        $config->delete();
+      }
     }
 
     $schema_dir = $this->extensionPathResolver->getPath($type, $name) . '/' . InstallStorage::CONFIG_SCHEMA_DIRECTORY;
@@ -256,7 +266,7 @@ class ConfigManager implements ConfigManagerInterface {
   /**
    * {@inheritdoc}
    */
-  public function findConfigEntityDependencies($type, array $names, ConfigDependencyManager $dependency_manager = NULL) {
+  public function findConfigEntityDependencies($type, array $names, ?ConfigDependencyManager $dependency_manager = NULL) {
     if (!$dependency_manager) {
       $dependency_manager = $this->getConfigDependencyManager();
     }
@@ -264,13 +274,13 @@ class ConfigManager implements ConfigManagerInterface {
     foreach ($names as $name) {
       $dependencies[] = $dependency_manager->getDependentEntities($type, $name);
     }
-    return array_merge([], ...$dependencies);
+    return array_merge(...$dependencies);
   }
 
   /**
    * {@inheritdoc}
    */
-  public function findConfigEntityDependenciesAsEntities($type, array $names, ConfigDependencyManager $dependency_manager = NULL) {
+  public function findConfigEntityDependenciesAsEntities($type, array $names, ?ConfigDependencyManager $dependency_manager = NULL) {
     $dependencies = $this->findConfigEntityDependencies($type, $names, $dependency_manager);
     $entities = [];
     $definitions = $this->entityTypeManager->getDefinitions();
@@ -284,17 +294,21 @@ class ConfigManager implements ConfigManagerInterface {
       // a UUID key.
       if ($entity_type_id) {
         $id = substr($config_name, strlen($definitions[$entity_type_id]->getConfigPrefix()) + 1);
-        $entities[$entity_type_id][] = $id;
+        $entities[$entity_type_id][$config_name] = $id;
       }
     }
-    $entities_to_return = [];
+    // Align the order of entities returned to the dependency order by first
+    // populating the keys in the same order.
+    $entities_to_return = array_fill_keys(array_keys($dependencies), NULL);
     foreach ($entities as $entity_type_id => $entities_to_load) {
       $storage = $this->entityTypeManager->getStorage($entity_type_id);
-      // Remove the keys since there are potential ID clashes from different
-      // configuration entity types.
-      $entities_to_return = array_merge($entities_to_return, array_values($storage->loadMultiple($entities_to_load)));
+      $loaded_entities = $storage->loadMultiple($entities_to_load);
+      foreach ($loaded_entities as $loaded_entity) {
+        $entities_to_return[$loaded_entity->getConfigDependencyName()] = $loaded_entity;
+      }
     }
-    return $entities_to_return;
+    // Return entities list with NULL entries removed.
+    return array_filter($entities_to_return);
   }
 
   /**
@@ -391,7 +405,7 @@ class ConfigManager implements ConfigManagerInterface {
   public function getConfigCollectionInfo() {
     if (!isset($this->configCollectionInfo)) {
       $this->configCollectionInfo = new ConfigCollectionInfo();
-      $this->eventDispatcher->dispatch($this->configCollectionInfo, ConfigEvents::COLLECTION_INFO);
+      $this->eventDispatcher->dispatch($this->configCollectionInfo, ConfigCollectionEvents::COLLECTION_INFO);
     }
     return $this->configCollectionInfo;
   }
@@ -487,13 +501,14 @@ class ConfigManager implements ConfigManagerInterface {
     $missing_dependencies = [];
     foreach ($this->activeStorage->readMultiple($this->activeStorage->listAll()) as $config_data) {
       if (isset($config_data['dependencies']['content'])) {
-        $content_dependencies = array_merge($content_dependencies, $config_data['dependencies']['content']);
+        $content_dependencies[] = $config_data['dependencies']['content'];
       }
       if (isset($config_data['dependencies']['enforced']['content'])) {
-        $content_dependencies = array_merge($content_dependencies, $config_data['dependencies']['enforced']['content']);
+        $content_dependencies[] = $config_data['dependencies']['enforced']['content'];
       }
     }
-    foreach (array_unique($content_dependencies) as $content_dependency) {
+    $unique_content_dependencies = array_unique(array_merge(...$content_dependencies));
+    foreach ($unique_content_dependencies as $content_dependency) {
       // Format of the dependency is entity_type:bundle:uuid.
       [$entity_type, $bundle, $uuid] = explode(':', $content_dependency, 3);
       if (!$this->entityRepository->loadEntityByUuid($entity_type, $uuid)) {

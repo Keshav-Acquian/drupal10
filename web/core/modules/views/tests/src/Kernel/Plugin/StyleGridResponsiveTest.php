@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Drupal\Tests\views\Kernel\Plugin;
 
 use Drupal\views\Views;
@@ -59,7 +61,7 @@ class StyleGridResponsiveTest extends PluginKernelTestBase {
     $result = $this->xpath('//div[contains(@class, "views-view-responsive-grid")]/div[contains(@class, "views-view-responsive-grid__item")]/div[contains(@class, "views-view-responsive-grid__item-inner")]');
     // There are five results for this test view. See ViewTestData::dataSet().
     $expected_count = 5;
-    $this->assertSame($expected_count, count($result), "The expected number of items are rendered in the correct structure.");
+    $this->assertCount(5, $result, "The expected number of items are rendered in the correct structure.");
   }
 
   /**
@@ -68,10 +70,10 @@ class StyleGridResponsiveTest extends PluginKernelTestBase {
    * @return array
    *   Array containing options for the style plugin and expected values.
    */
-  public function providerTestResponsiveGrid() {
+  public static function providerTestResponsiveGrid() {
     return [
       'horizontal' => [
-        'settings' => [
+        'options' => [
           'columns' => 7,
           'cell_min_width' => 123,
           'grid_gutter' => 13,
@@ -85,7 +87,7 @@ class StyleGridResponsiveTest extends PluginKernelTestBase {
         ],
       ],
       'vertical' => [
-        'settings' => [
+        'options' => [
           'columns' => 8,
           'cell_min_width' => 50,
           'grid_gutter' => 44,
@@ -99,7 +101,7 @@ class StyleGridResponsiveTest extends PluginKernelTestBase {
         ],
       ],
       'default options' => [
-        'settings' => [],
+        'options' => [],
         'expected' => [
           'columns' => 4,
           'cell_min_width' => 100,

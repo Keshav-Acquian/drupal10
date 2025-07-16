@@ -3,12 +3,16 @@
 namespace Drupal\filter\Entity;
 
 use Drupal\Component\Plugin\PluginInspectionInterface;
+
+use Drupal\Core\Config\Action\Attribute\ActionMethod;
 use Drupal\Core\Config\Entity\ConfigEntityBase;
 use Drupal\Core\Entity\EntityWithPluginCollectionInterface;
 use Drupal\Core\Entity\EntityStorageInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\filter\FilterFormatInterface;
 use Drupal\filter\FilterPluginCollection;
 use Drupal\filter\Plugin\FilterInterface;
+use Drupal\user\Entity\Role;
 
 /**
  * Represents a text format.
@@ -27,7 +31,8 @@ use Drupal\filter\Plugin\FilterInterface;
  *     "form" = {
  *       "add" = "Drupal\filter\FilterFormatAddForm",
  *       "edit" = "Drupal\filter\FilterFormatEditForm",
- *       "disable" = "Drupal\filter\Form\FilterDisableForm"
+ *       "disable" = "Drupal\filter\Form\FilterDisableForm",
+ *       "enable" = "Drupal\filter\Form\FilterEnableForm",
  *     },
  *     "list_builder" = "Drupal\filter\FilterFormatListBuilder",
  *     "access" = "Drupal\filter\FilterFormatAccessControlHandler",
@@ -42,7 +47,8 @@ use Drupal\filter\Plugin\FilterInterface;
  *   },
  *   links = {
  *     "edit-form" = "/admin/config/content/formats/manage/{filter_format}",
- *     "disable" = "/admin/config/content/formats/manage/{filter_format}/disable"
+ *     "disable" = "/admin/config/content/formats/manage/{filter_format}/disable",
+ *     "enable" = "/admin/config/content/formats/manage/{filter_format}/enable",
  *   },
  *   config_export = {
  *     "name",
@@ -159,6 +165,7 @@ class FilterFormat extends ConfigEntityBase implements FilterFormatInterface, En
   /**
    * {@inheritdoc}
    */
+  #[ActionMethod(adminLabel: new TranslatableMarkup('Sets configuration for a filter plugin'))]
   public function setFilterConfig($instance_id, array $configuration) {
     $this->filters[$instance_id] = $configuration;
     if (isset($this->filterCollection)) {
@@ -201,10 +208,18 @@ class FilterFormat extends ConfigEntityBase implements FilterFormatInterface, En
    * {@inheritdoc}
    */
   public function preSave(EntityStorageInterface $storage) {
-    // Ensure the filters have been sorted before saving.
-    $this->filters()->sort();
-
     parent::preSave($storage);
+    if (!$this->isSyncing() && $this->hasTrustedData()) {
+      // Filters are sorted by keys to ensure config export diffs are easy to
+      // read and there is a minimal changeset. If the save is not trusted then
+      // the configuration will be sorted by StorableConfigBase.
+      ksort($this->filters);
+      // Ensure the filter configuration is well-formed.
+      array_walk($this->filters, function (array &$config, string $filter): void {
+        $config['id'] ??= $filter;
+        $config['provider'] ??= $this->filters($filter)->getPluginDefinition()['provider'];
+      });
+    }
 
     assert(is_string($this->label()), 'Filter format label is expected to be a string.');
     $this->name = trim($this->label());
@@ -228,7 +243,7 @@ class FilterFormat extends ConfigEntityBase implements FilterFormatInterface, En
       // \Drupal\filter\FilterPermissions::permissions() and lastly
       // filter_formats(), so its cache must be reset upfront.
       if (($roles = $this->get('roles')) && $permission = $this->getPermissionName()) {
-        foreach (user_roles() as $rid => $name) {
+        foreach (Role::loadMultiple() as $rid => $role) {
           $enabled = in_array($rid, $roles, TRUE);
           user_role_change_permissions($rid, [$permission => $enabled]);
         }

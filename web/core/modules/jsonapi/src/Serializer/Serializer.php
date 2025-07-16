@@ -34,7 +34,7 @@ final class Serializer extends SymfonySerializer {
    */
   public function __construct(array $normalizers = [], array $encoders = []) {
     foreach ($normalizers as $normalizer) {
-      if (strpos(get_class($normalizer), 'Drupal\jsonapi\Normalizer') !== 0) {
+      if (!str_starts_with(get_class($normalizer), 'Drupal\jsonapi\Normalizer')) {
         throw new \LogicException('JSON:API does not allow adding more normalizers!');
       }
     }
@@ -80,7 +80,7 @@ final class Serializer extends SymfonySerializer {
   /**
    * {@inheritdoc}
    */
-  public function supportsNormalization($data, string $format = NULL, array $context = []): bool {
+  public function supportsNormalization($data, ?string $format = NULL, array $context = []): bool {
     return $this->selfSupportsNormalization($data, $format, $context) || $this->fallbackNormalizer->supportsNormalization($data, $format, $context);
   }
 
@@ -104,7 +104,7 @@ final class Serializer extends SymfonySerializer {
   /**
    * {@inheritdoc}
    */
-  public function supportsDenormalization($data, string $type, string $format = NULL, array $context = []): bool {
+  public function supportsDenormalization($data, string $type, ?string $format = NULL, array $context = []): bool {
     return $this->selfSupportsDenormalization($data, $type, $format, $context) || $this->fallbackNormalizer->supportsDenormalization($data, $type, $format, $context);
   }
 

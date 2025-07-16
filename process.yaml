@@ -1,0 +1,70 @@
+ 1912  rm -rf git_project
+ 1913  mkdir git && cd git
+ 1914  git clone https://github.com/Keshav-Acquian/drupal10.git
+ 1915  ls -ltr
+ 1916  cd drupal10
+ 1917  ls -ltr
+ 1918  ddev start
+ 1919  ddev launch
+ 1920  ddev drush site:install --account-name=admin --account-pass=admin -y
+ 1921  ddev launch
+ 1922  git checkout -b feature-jul-25
+ 1923  git status
+ 1924  git branch
+ 1925  ddev composer require 'drupal/admin_toolbar:^3.6'
+ 1926  ddev drush pml
+ 1927  ddev drush cr
+ 1928  ddev drush pml
+ 1929  ddev drush en admin_toolbar
+ 1930  ddev drush cr
+ 1931  ddev composer require 'drupal/ultimate_cron:^2.0@beta'
+ 1932  ddev composer require 'drupal/ultimate_cron:2.x-dev@dev'
+ 1933  cd ..
+ 1934  ls -ltr
+ 1935  cd drupal10
+ 1936  ls -ltr
+ 1937  code composer.json
+ 1938  ddev composer require 'drupal/ultimate_cron:^2.0@alpha'
+ 1939  ddev drush pml|grep cron
+ 1940  ddev drush cr
+ 1941  ddev drush pml|grep cron
+ 1942  ddev drush en ultimate_cron
+ 1943  ddev composer require 'drupal/ultimate_cron:^2.0@alpha'
+ 1944  ddev drush cr
+ 1945  ddev drush pml|grep cron
+ 1946  ddev drush en ultimate_cron
+ 1947  ddev composer require 'drupal/ultimate_cron:^2.0@alpha'
+ 1948  ddev composer audit
+ 1949  ddev drush cr
+ 1950  ddev drush en ultimate_cron
+ 1951  ddev export-db --file=backup.sql
+ 1952  cp -r vendor vendor-backup
+ 1953  ls -ltr
+ 1954  ddev composer require 'drupal/core-recommended:^10.2' 'drupal/core-composer-scaffold:^10.2' 'drupal/core-project-message:^10.2' --update-with-dependencies
+ 1955  cat composer.json|grep 10.2
+ 1956  ddev composer require 'drupal/core-recommended:^10.2' 'drupal/core-composer-scaffold:^10.2' 'drupal/core-project-message:^10.2' --update-with-dependencies
+ 1957  composer update
+ 1958  drush updb
+ 1959  ddev drush updb
+ 1960  ddev composer require 'drupal/core-recommended:^10.2' 'drupal/core-composer-scaffold:^10.2' 'drupal/core-project-message:^10.2' --update-with-dependencies
+ 1961  ddev drush cr
+ 1962  touch process.txt
+ 1963  code process.txt
+ 1964  history -50
+ 1965  ddev drush en ultimate_cron
+ 1966  git status
+ 1967  git add .
+ 1968  git status
+ 1969  ls -ltr
+ 1970  git commit -m "Update Drupal core to 10.2 and admin toolbar"
+ 1971  git push origin jul-25-test
+ 1972  git fetch
+ 1973  git push origin jul-25-test
+ 1974  git push origin feature-jul-25
+ 1975  ls -ltr
+ 1976  mv process.txt process.yaml
+ 1977  code process.yaml
+ 1978  rm process.yaml
+ 1979  history -50 > process.yaml
+ 1980  history -55 > process.yaml
+ 1981  code process.yaml

@@ -45,23 +45,23 @@ class YamlDumper extends Dumper
     public function dump(array $options = []): string
     {
         if (!class_exists(YmlDumper::class)) {
-            throw new LogicException('Unable to dump the container as the Symfony Yaml Component is not installed.');
+            throw new LogicException('Unable to dump the container as the Symfony Yaml Component is not installed. Try running "composer require symfony/yaml".');
         }
 
         $this->dumper ??= new YmlDumper();
 
-        return $this->container->resolveEnvPlaceholders($this->addParameters()."\n".$this->addServices());
+        return $this->addParameters()."\n".$this->addServices();
     }
 
     private function addService(string $id, Definition $definition): string
     {
-        $code = "    $id:\n";
+        $code = "    {$this->dumper->dump($id)}:\n";
         if ($class = $definition->getClass()) {
             if (str_starts_with($class, '\\')) {
                 $class = substr($class, 1);
             }
 
-            $code .= sprintf("        class: %s\n", $this->dumper->dump($class));
+            $code .= sprintf("        class: %s\n", $this->dumper->dump($this->container->resolveEnvPlaceholders($class)));
         }
 
         if (!$definition->isPrivate()) {
@@ -69,7 +69,9 @@ class YamlDumper extends Dumper
         }
 
         $tagsCode = '';
-        foreach ($definition->getTags() as $name => $tags) {
+        $tags = $definition->getTags();
+        $tags['container.error'] = array_map(fn ($e) => ['message' => $e], $definition->getErrors());
+        foreach ($tags as $name => $tags) {
             foreach ($tags as $attributes) {
                 $att = [];
                 foreach ($attributes as $key => $value) {
@@ -85,7 +87,7 @@ class YamlDumper extends Dumper
         }
 
         if ($definition->getFile()) {
-            $code .= sprintf("        file: %s\n", $this->dumper->dump($definition->getFile()));
+            $code .= sprintf("        file: %s\n", $this->dumper->dump($this->container->resolveEnvPlaceholders($definition->getFile())));
         }
 
         if ($definition->isSynthetic()) {
@@ -151,7 +153,11 @@ class YamlDumper extends Dumper
         }
 
         if ($callable = $definition->getFactory()) {
-            $code .= sprintf("        factory: %s\n", $this->dumper->dump($this->dumpCallable($callable), 0));
+            if (\is_array($callable) && ['Closure', 'fromCallable'] !== $callable && $definition->getClass() === $callable[0]) {
+                $code .= sprintf("        constructor: %s\n", $callable[1]);
+            } else {
+                $code .= sprintf("        factory: %s\n", $this->dumper->dump($this->dumpCallable($callable), 0));
+            }
         }
 
         if ($callable = $definition->getConfigurator()) {
@@ -232,7 +238,7 @@ class YamlDumper extends Dumper
             }
         }
 
-        return $callable;
+        return $this->container->resolveEnvPlaceholders($callable);
     }
 
     /**
@@ -272,6 +278,9 @@ class YamlDumper extends Dumper
                     }
                     $content['exclude'] = 1 === \count($excludes) ? $excludes[0] : $excludes;
                 }
+                if (!$tag->excludeSelf()) {
+                    $content['exclude_self'] = false;
+                }
 
                 return new TaggedValue($value instanceof TaggedIteratorArgument ? 'tagged_iterator' : 'tagged_locator', $content);
             }
@@ -290,7 +299,7 @@ class YamlDumper extends Dumper
         if (\is_array($value)) {
             $code = [];
             foreach ($value as $k => $v) {
-                $code[$k] = $this->dumpValue($v);
+                $code[$this->container->resolveEnvPlaceholders($k)] = $this->dumpValue($v);
             }
 
             return $code;
@@ -307,13 +316,13 @@ class YamlDumper extends Dumper
         } elseif ($value instanceof AbstractArgument) {
             return new TaggedValue('abstract', $value->getText());
         } elseif (\is_object($value) || \is_resource($value)) {
-            throw new RuntimeException('Unable to dump a service container if a parameter is an object or a resource.');
+            throw new RuntimeException(sprintf('Unable to dump a service container if a parameter is an object or a resource, got "%s".', get_debug_type($value)));
         }
 
-        return $value;
+        return $this->container->resolveEnvPlaceholders($value);
     }
 
-    private function getServiceCall(string $id, Reference $reference = null): string
+    private function getServiceCall(string $id, ?Reference $reference = null): string
     {
         if (null !== $reference) {
             switch ($reference->getInvalidBehavior()) {
@@ -350,7 +359,7 @@ class YamlDumper extends Dumper
             $filtered[$key] = $value;
         }
 
-        return $escape ? $this->escape($filtered) : $filtered;
+        return $escape ? $this->container->resolveEnvPlaceholders($this->escape($filtered)) : $filtered;
     }
 
     private function escape(array $arguments): array

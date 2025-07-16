@@ -55,6 +55,7 @@
 }
 
 .site-header__inner {
+  position: relative;
   z-index: 1; /* Appear in front of Drupal's tabs. */
   flex-grow: 1;
   width: calc(100vw - var(--content-left) - var(--drupal-displace-offset-left, 0px) - var(--drupal-displace-offset-right, 0px));
@@ -67,7 +68,10 @@
  */
 html.js body:not(.is-always-mobile-nav) .site-header__inner {
   @media (--nav) {
-    transition: opacity 0.3s, transform 0.3s, box-shadow 0.3s;
+    transition:
+      opacity 0.3s,
+      transform 0.3s,
+      box-shadow 0.3s;
   }
 }
 
@@ -100,4 +104,9 @@ body:not(.is-always-mobile-nav) .site-header__fixable.is-fixed:not(.is-expanded)
 .site-header__inner__container {
   display: flex;
   justify-content: space-between;
+}
+
+/* Reset width set by layout.css */
+body.is-fixed .site-header__inner__container {
+  width: auto;
 }

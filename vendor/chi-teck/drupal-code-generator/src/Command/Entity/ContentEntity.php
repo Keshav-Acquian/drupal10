@@ -1,4 +1,6 @@
-<?php declare(strict_types = 1);
+<?php
+
+declare(strict_types=1);
 
 namespace DrupalCodeGenerator\Command\Entity;
 
@@ -52,14 +54,28 @@ final class ContentEntity extends BaseGenerator {
     $vars['changed_base_field'] = $ir->confirm('Add "changed" base field?');
     $vars['author_base_field'] = $ir->confirm('Add "author" base field?');
     $vars['description_base_field'] = $ir->confirm('Add "description" base field?');
-    $vars['has_base_fields'] = $vars['label_base_field'] || $vars['status_base_field'] ||
-                               $vars['created_base_field'] || $vars['changed_base_field'] ||
-                               $vars['author_base_field'] || $vars['description_base_field'];
+    $vars['has_base_fields'] = $vars['label_base_field'] ||
+                               $vars['status_base_field'] ||
+                               $vars['created_base_field'] ||
+                               $vars['changed_base_field'] ||
+                               $vars['author_base_field'] ||
+                               $vars['description_base_field'];
 
-    $vars['admin_permission'] = match ($vars['bundle']) {
-      TRUE => 'administer ' . \strtolower($vars['entity_type_label']) . ' types',
-      FALSE => 'administer ' . \strtolower(Utils::pluralize($vars['entity_type_label'])),
-    };
+    $vars['permissions']['administer'] = $vars['bundle']
+      ? 'administer {entity_type_id} types' : 'administer {entity_type_id}';
+
+    if ($vars['access_controller']) {
+      $vars['permissions']['view'] = 'view {entity_type_id}';
+      $vars['permissions']['edit'] = 'edit {entity_type_id}';
+      $vars['permissions']['delete'] = 'delete {entity_type_id}';
+      $vars['permissions']['create'] = 'create {entity_type_id}';
+    }
+
+    if ($vars['access_controller'] && $vars['revisionable']) {
+      $vars['permissions']['view_revision'] = 'view {entity_type_id} revision';
+      $vars['permissions']['revert_revision'] = 'revert {entity_type_id} revision';
+      $vars['permissions']['delete_revision'] = 'delete {entity_type_id} revision';
+    }
 
     $vars['rest_configuration'] = $ir->confirm('Create REST configuration for the entity?', FALSE);
 
@@ -128,7 +144,7 @@ final class ContentEntity extends BaseGenerator {
     if ($vars['template']) {
       $assets->addFile('templates/{entity_type_id|u2h}.html.twig', 'templates/model-example.html.twig.twig');
       $assets->addFile('{machine_name}.module', 'model.module.twig')
-        ->appendIfExists(7);
+        ->appendIfExists(9);
     }
 
     if ($vars['access_controller']) {

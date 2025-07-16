@@ -1,9 +1,6 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Tests\Core\Controller\TitleResolverTest.
- */
+declare(strict_types=1);
 
 namespace Drupal\Tests\Core\Controller;
 
@@ -52,6 +49,8 @@ class TitleResolverTest extends UnitTestCase {
    * {@inheritdoc}
    */
   protected function setUp(): void {
+    parent::setUp();
+
     $this->controllerResolver = $this->createMock('\Drupal\Core\Controller\ControllerResolverInterface');
     $this->translationManager = $this->createMock('\Drupal\Core\StringTranslation\TranslationInterface');
     $this->argumentResolver = $this->createMock('\Symfony\Component\HttpKernel\Controller\ArgumentResolverInterface');
@@ -64,7 +63,7 @@ class TitleResolverTest extends UnitTestCase {
    *
    * @see \Drupal\Core\Controller\TitleResolver::getTitle()
    */
-  public function testStaticTitle() {
+  public function testStaticTitle(): void {
     $request = new Request();
     $route = new Route('/test-route', ['_title' => 'static title']);
     $this->assertEquals(new TranslatableMarkup('static title', [], [], $this->translationManager), $this->titleResolver->getTitle($request, $route));
@@ -75,7 +74,7 @@ class TitleResolverTest extends UnitTestCase {
    *
    * @see \Drupal\Core\Controller\TitleResolver::getTitle()
    */
-  public function testStaticTitleZero() {
+  public function testStaticTitleZero(): void {
     $request = new Request();
     $route = new Route('/test-route', ['_title' => '0', '_title_context' => '0']);
     $this->assertEquals(new TranslatableMarkup('0', [], ['context' => '0'], $this->translationManager), $this->titleResolver->getTitle($request, $route));
@@ -86,7 +85,7 @@ class TitleResolverTest extends UnitTestCase {
    *
    * @see \Drupal\Core\Controller\TitleResolver::getTitle()
    */
-  public function testStaticTitleWithContext() {
+  public function testStaticTitleWithContext(): void {
     $request = new Request();
     $route = new Route('/test-route', ['_title' => 'static title', '_title_context' => 'context']);
     $this->assertEquals(new TranslatableMarkup('static title', [], ['context' => 'context'], $this->translationManager), $this->titleResolver->getTitle($request, $route));
@@ -96,42 +95,38 @@ class TitleResolverTest extends UnitTestCase {
    * Tests a static title with a parameter.
    *
    * @see \Drupal\Core\Controller\TitleResolver::getTitle()
-   *
-   * @dataProvider providerTestStaticTitleWithParameter
    */
-  public function testStaticTitleWithParameter($title, $expected_title) {
+  public function testStaticTitleWithParameter(): void {
     $raw_variables = new InputBag(['test' => 'value', 'test2' => 'value2']);
     $request = new Request();
     $request->attributes->set('_raw_variables', $raw_variables);
 
-    $route = new Route('/test-route', ['_title' => $title]);
-    $this->assertEquals($expected_title, $this->titleResolver->getTitle($request, $route));
-  }
+    $route = new Route('/test-route', ['_title' => 'static title @test']);
+    $this->assertEquals(new TranslatableMarkup('static title @test', ['@test' => 'value', '%test' => 'value', '@test2' => 'value2', '%test2' => 'value2'], [], $this->translationManager), $this->titleResolver->getTitle($request, $route));
 
-  public function providerTestStaticTitleWithParameter() {
-    $translation_manager = $this->createMock('\Drupal\Core\StringTranslation\TranslationInterface');
-    return [
-      ['static title @test', new TranslatableMarkup('static title @test', ['@test' => 'value', '%test' => 'value', '@test2' => 'value2', '%test2' => 'value2'], [], $translation_manager)],
-      ['static title %test', new TranslatableMarkup('static title %test', ['@test' => 'value', '%test' => 'value', '@test2' => 'value2', '%test2' => 'value2'], [], $translation_manager)],
-    ];
+    $route = new Route('/test-route', ['_title' => 'static title %test']);
+    $this->assertEquals(new TranslatableMarkup('static title %test', ['@test' => 'value', '%test' => 'value', '@test2' => 'value2', '%test2' => 'value2'], [], $this->translationManager), $this->titleResolver->getTitle($request, $route));
   }
 
   /**
-   * Tests a static title with a NULL value parameter.
+   * Tests a static title with a non-scalar value parameter.
    *
    * @see \Drupal\Core\Controller\TitleResolver::getTitle()
    */
-  public function testStaticTitleWithNullValueParameter() {
-    $raw_variables = new InputBag(['test' => NULL, 'test2' => 'value']);
+  public function testStaticTitleWithNullAndArrayValueParameter(): void {
+    $raw_variables = new InputBag(['test1' => NULL, 'test2' => ['foo' => 'bar'], 'test3' => 'value']);
     $request = new Request();
     $request->attributes->set('_raw_variables', $raw_variables);
 
-    $route = new Route('/test-route', ['_title' => 'static title %test @test']);
+    $route = new Route('/test-route', ['_title' => 'static title %test1 @test1 %test2 @test2 %test3 @test3']);
     $translatable_markup = $this->titleResolver->getTitle($request, $route);
-    $this->assertSame('', $translatable_markup->getArguments()['@test']);
-    $this->assertSame('', $translatable_markup->getArguments()['%test']);
-    $this->assertSame('value', $translatable_markup->getArguments()['@test2']);
-    $this->assertSame('value', $translatable_markup->getArguments()['%test2']);
+    $arguments = $translatable_markup->getArguments();
+    $this->assertNotContains('@test1', $arguments);
+    $this->assertNotContains('%test1', $arguments);
+    $this->assertNotContains('@test2', $arguments);
+    $this->assertNotContains('%test2', $arguments);
+    $this->assertSame('value', $translatable_markup->getArguments()['@test3']);
+    $this->assertSame('value', $translatable_markup->getArguments()['%test3']);
   }
 
   /**
@@ -139,7 +134,7 @@ class TitleResolverTest extends UnitTestCase {
    *
    * @see \Drupal\Core\Controller\TitleResolver::getTitle()
    */
-  public function testDynamicTitle() {
+  public function testDynamicTitle(): void {
     $request = new Request();
     $route = new Route('/test-route', ['_title' => 'static title', '_title_callback' => 'Drupal\Tests\Core\Controller\TitleCallback::example']);
 
